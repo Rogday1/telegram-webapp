@@ -5,7 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... предыдущие стили ... */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            color: var(--tg-theme-text-color, #000000);
+            background: var(--tg-theme-bg-color, #ffffff);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .chat-area {
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background: var(--tg-theme-bg-color, #ffffff);
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--tg-theme-bg-color, #ffffff);
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            font-size: 16px;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            border: none;
+            background: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .send-button:hover {
+            opacity: 0.9;
+        }
+
+        .loading {
+            color: var(--tg-theme-hint-color, #999);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -29,15 +111,28 @@
         const sendButton = document.getElementById('sendButton');
         const chatArea = document.getElementById('chatArea');
 
+        // Загружаем историю чата
+        const savedMessages = localStorage.getItem('chatMessages');
+        if (savedMessages) {
+            chatArea.innerHTML = savedMessages;
+        }
+
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
             messageDiv.textContent = text;
             chatArea.appendChild(messageDiv);
             chatArea.scrollTop = chatArea.scrollHeight;
+            
+            // Сохраняем историю чата
+            localStorage.setItem('chatMessages', chatArea.innerHTML);
         }
 
+        let isWaitingForResponse = false;
+
         async function sendMessage() {
+            if (isWaitingForResponse) return;
+
             const message = messageInput.value.trim();
             if (!message) return;
 
@@ -46,15 +141,37 @@
             messageInput.value = '';
 
             try {
-                // Отправляем сообщение в бот и закрываем веб-приложение
+                isWaitingForResponse = true;
+                sendButton.disabled = true;
+                messageInput.disabled = true;
+
+                // Показываем индикатор загрузки
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'message bot-message loading';
+                loadingDiv.textContent = '⌛ Печатает...';
+                chatArea.appendChild(loadingDiv);
+                chatArea.scrollTop = chatArea.scrollHeight;
+
+                // Отправляем сообщение в бот
                 await tg.sendData(JSON.stringify({
                     action: 'message',
                     text: message
                 }));
-                tg.close();
+
+                // Ждем 2 секунды для имитации ответа
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Удаляем индикатор загрузки
+                loadingDiv.remove();
+
             } catch (error) {
                 addMessage('❌ Ошибка отправки сообщения', false);
                 console.error('Ошибка:', error);
+            } finally {
+                isWaitingForResponse = false;
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
             }
         }
 
@@ -63,11 +180,14 @@
 
         // Обработка нажатия Enter
         messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
+
+        // Фокус на поле ввода при открытии
+        messageInput.focus();
     </script>
 </body>
 </html>
