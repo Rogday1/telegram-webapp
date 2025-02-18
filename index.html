@@ -1,122 +1,111 @@
 <!DOCTYPE html>
 <html>
-<!-- ... остальные стили без изменений ... -->
+<head>
+    <title>Telegram WebApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* ... предыдущие стили ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Меню -->
+        <div class="menu" id="menuContainer">
+            <button class="menu-button" onclick="startChat('chat')">💬 Чат с ботом</button>
+            <button class="menu-button" onclick="startChat('image')">🎨 Генерация изображений</button>
+            <button class="menu-button" onclick="startChat('help')">❓ Помощь</button>
+        </div>
 
-<script>
-    let tg = window.Telegram.WebApp;
-    tg.expand();
+        <!-- Чат -->
+        <div class="chat-container" id="chatContainer">
+            <button class="back-button" onclick="showMenu()">← Меню</button>
+            <div class="chat-area" id="chatArea"></div>
+            <div class="input-area">
+                <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
+                <button class="send-button" id="sendButton">Отправить</button>
+            </div>
+        </div>
+    </div>
 
-    const menuContainer = document.getElementById('menuContainer');
-    const chatContainer = document.getElementById('chatContainer');
-    const messageInput = document.getElementById('messageInput');
-    const sendButton = document.getElementById('sendButton');
-    const chatArea = document.getElementById('chatArea');
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
 
-    let currentMode = '';
-    let isWaitingForResponse = false;
+        const menuContainer = document.getElementById('menuContainer');
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatArea = document.getElementById('chatArea');
 
-    function showMenu() {
-        menuContainer.style.display = 'flex';
-        chatContainer.style.display = 'none';
-    }
+        let currentMode = '';
 
-    function startChat(mode) {
-        currentMode = mode;
-        menuContainer.style.display = 'none';
-        chatContainer.style.display = 'block';
-        chatArea.innerHTML = '';
-
-        let welcomeMessage = '';
-        switch(mode) {
-            case 'chat':
-                welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
-                break;
-            case 'image':
-                welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
-                break;
-            case 'help':
-                welcomeMessage = '❓ Чем могу помочь?';
-                break;
+        function showMenu() {
+            menuContainer.style.display = 'flex';
+            chatContainer.style.display = 'none';
         }
-        addMessage(welcomeMessage, false);
-        messageInput.focus();
-    }
 
-    function addMessage(text, isUser = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-        messageDiv.textContent = text;
-        chatArea.appendChild(messageDiv);
-        chatArea.scrollTop = chatArea.scrollHeight;
-    }
+        function startChat(mode) {
+            currentMode = mode;
+            menuContainer.style.display = 'none';
+            chatContainer.style.display = 'block';
+            chatArea.innerHTML = '';
 
-    async function sendMessage() {
-        if (isWaitingForResponse) return;
-        
-        const message = messageInput.value.trim();
-        if (!message) return;
-
-        addMessage(message, true);
-        messageInput.value = '';
-
-        try {
-            isWaitingForResponse = true;
-            sendButton.disabled = true;
-            messageInput.disabled = true;
-
-            // Показываем индикатор загрузки
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message bot-message';
-            loadingDiv.textContent = '⌛ Ожидание ответа...';
-            chatArea.appendChild(loadingDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
-
-            // Отправляем запрос к API
-            const response = await fetch('http://localhost:8000/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: currentMode,
-                    text: message
-                })
-            });
-
-            // Удаляем индикатор загрузки
-            loadingDiv.remove();
-
-            if (response.ok) {
-                const data = await response.json();
-                addMessage(data.response, false);
-            } else {
-                throw new Error('Network response was not ok');
+            let welcomeMessage = '';
+            switch(mode) {
+                case 'chat':
+                    welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
+                    break;
+                case 'image':
+                    welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
+                    break;
+                case 'help':
+                    welcomeMessage = '❓ Чем могу помочь?';
+                    break;
             }
-
-        } catch (error) {
-            addMessage('❌ Ошибка: Не удалось получить ответ', false);
-            console.error('Error:', error);
-        } finally {
-            isWaitingForResponse = false;
-            sendButton.disabled = false;
-            messageInput.disabled = false;
+            addMessage(welcomeMessage, false);
             messageInput.focus();
         }
-    }
 
-    // Обработка нажатия кнопки
-    sendButton.addEventListener('click', sendMessage);
-
-    // Обработка нажатия Enter
-    messageInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            sendMessage();
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = text;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
-    });
 
-    // Показываем меню при запуске
-    showMenu();
-</script>
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            messageInput.value = '';
+
+            try {
+                await tg.sendData(JSON.stringify({
+                    action: currentMode,
+                    text: message
+                }));
+            } catch (error) {
+                addMessage('❌ Ошибка отправки сообщения', false);
+                console.error('Error:', error);
+            }
+        }
+
+        // Обработка нажатия кнопки
+        sendButton.addEventListener('click', sendMessage);
+
+        // Обработка нажатия Enter
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Показываем меню при запуске
+        showMenu();
+    </script>
 </body>
 </html>
