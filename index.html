@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Telegram WebApp Demo</title>
+    <title>Telegram WebApp</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -16,44 +16,77 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 32px);
         }
 
-        .button {
-            display: block;
-            width: 100%;
-            padding: 12px 20px;
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .message {
             margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background: var(--tg-theme-button-color, #50a8eb);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background: var(--tg-theme-bg-color, #ffffff);
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #999999);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .send-button {
+            padding: 12px 24px;
             border: none;
             border-radius: 8px;
             background: var(--tg-theme-button-color, #50a8eb);
             color: var(--tg-theme-button-text-color, #ffffff);
             cursor: pointer;
-            font-size: 16px;
-            text-align: center;
-        }
-
-        .button:hover {
-            opacity: 0.9;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <button class="button" onclick="sendMessage('chat')">💬 Чат с ботом</button>
-        <button class="button" onclick="sendMessage('image')">🎨 Генерация изображений</button>
-        <button class="button" onclick="sendMessage('help')">❓ Помощь</button>
+        <div class="chat-area" id="chatArea">
+            <div class="message bot-message">
+                👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!
+            </div>
+        </div>
+        <div class="input-area">
+            <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
+            <button class="send-button" onclick="sendMessage()">Отправить</button>
+        </div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        function sendMessage(action) {
-            tg.sendData(JSON.stringify({
-                action: action
-            }));
-            tg.close();
-        }
-    </script>
-</body>
-</html>
+        const message
