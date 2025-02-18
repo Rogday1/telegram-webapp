@@ -46,15 +46,22 @@
             messageInput.value = '';
 
             try {
+                // Показываем индикатор загрузки
+                addMessage('⌛ Ожидание ответа...', false);
+
                 // Отправляем сообщение в бот
                 await tg.sendData(JSON.stringify({
                     action: 'message',
                     text: message
                 }));
-                
-                // Закрываем веб-приложение для получения ответа
-                tg.close();
+
             } catch (error) {
+                // Удаляем индикатор загрузки
+                const loadingMessages = Array.from(chatArea.getElementsByClassName('bot-message')).filter(
+                    msg => msg.textContent === '⌛ Ожидание ответа...'
+                );
+                loadingMessages.forEach(msg => msg.remove());
+
                 addMessage('❌ Ошибка отправки сообщения', false);
                 console.error('Ошибка:', error);
             }
@@ -70,6 +77,35 @@
                 sendMessage();
             }
         });
+
+        // Сохраняем историю чата в localStorage
+        function saveHistory() {
+            const messages = Array.from(chatArea.children).map(msg => ({
+                text: msg.textContent,
+                isUser: msg.classList.contains('user-message')
+            }));
+            localStorage.setItem('chatHistory', JSON.stringify(messages));
+        }
+
+        // Загружаем историю чата
+        function loadHistory() {
+            const history = localStorage.getItem('chatHistory');
+            if (history) {
+                const messages = JSON.parse(history);
+                chatArea.innerHTML = ''; // Очищаем чат
+                messages.forEach(msg => addMessage(msg.text, msg.isUser));
+            }
+        }
+
+        // Загружаем историю при открытии
+        loadHistory();
+
+        // Сохраняем историю при добавлении сообщений
+        const originalAddMessage = addMessage;
+        addMessage = function(text, isUser) {
+            originalAddMessage(text, isUser);
+            saveHistory();
+        };
     </script>
 </body>
 </html>
