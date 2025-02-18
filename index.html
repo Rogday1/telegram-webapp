@@ -18,6 +18,31 @@
             margin: 0 auto;
         }
 
+        /* Стили для меню */
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .menu-button {
+            display: block;
+            width: 100%;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 8px;
+            background: var(--tg-theme-button-color, #50a8eb);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* Стили для чата */
+        .chat-container {
+            display: none;
+        }
+
         .chat-area {
             height: calc(100vh - 120px);
             overflow-y: auto;
@@ -80,45 +105,131 @@
             font-size: 16px;
         }
 
-        .send-button:hover {
-            opacity: 0.9;
-        }
-
-        .button {
-            display: block;
-            width: 100%;
-            padding: 12px 20px;
-            margin: 8px 0;
+        .back-button {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            padding: 8px 16px;
             border: none;
             border-radius: 8px;
-            background: var(--tg-theme-button-color, #50a8eb);
+            background: var(--tg-theme-button-color, #007bff);
             color: var(--tg-theme-button-text-color, #ffffff);
             cursor: pointer;
-            font-size: 16px;
-            text-align: center;
-        }
-
-        .button:hover {
-            opacity: 0.9;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <button class="button" onclick="sendMessage('chat')">💬 Чат с ботом</button>
-        <button class="button" onclick="sendMessage('image')">🎨 Генерация изображений</button>
-        <button class="button" onclick="sendMessage('help')">❓ Помощь</button>
+        <!-- Меню -->
+        <div class="menu" id="menuContainer">
+            <button class="menu-button" onclick="startChat('chat')">💬 Чат с ботом</button>
+            <button class="menu-button" onclick="startChat('image')">🎨 Генерация изображений</button>
+            <button class="menu-button" onclick="startChat('help')">❓ Помощь</button>
+        </div>
+
+        <!-- Чат -->
+        <div class="chat-container" id="chatContainer">
+            <button class="back-button" onclick="showMenu()">← Меню</button>
+            <div class="chat-area" id="chatArea">
+                <div class="message bot-message">
+                    👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
+                <button class="send-button" id="sendButton">Отправить</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        function sendMessage(action) {
-            tg.sendData(JSON.stringify({
-                action: action
-            }));
-            tg.close();
+        const menuContainer = document.getElementById('menuContainer');
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatArea = document.getElementById('chatArea');
+
+        let currentMode = '';
+
+        function showMenu() {
+            menuContainer.style.display = 'flex';
+            chatContainer.style.display = 'none';
+        }
+
+        function startChat(mode) {
+            currentMode = mode;
+            menuContainer.style.display = 'none';
+            chatContainer.style.display = 'block';
+            chatArea.innerHTML = '';
+
+            let welcomeMessage = '';
+            switch(mode) {
+                case 'chat':
+                    welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
+                    break;
+                case 'image':
+                    welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
+                    break;
+                case 'help':
+                    welcomeMessage = '❓ Чем могу помочь?';
+                    break;
+            }
+            addMessage(welcomeMessage, false);
+            messageInput.focus();
+        }
+
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = text;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            messageInput.value = '';
+
+            try {
+                addMessage('⌛ Ожидание ответа...', false);
+
+                await tg.sendData(JSON.stringify({
+                    action: currentMode,
+                    text: message
+                }));
+                tg.close();
+            } catch (error) {
+                addMessage('❌ Ошибка отправки сообщения', false);
+                console.error('Ошибка:', error);
+            }
+        }
+
+        // Обработка нажатия кнопки
+        sendButton.addEventListener('click', sendMessage);
+
+        // Обработка нажатия Enter
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Проверяем URL на наличие ответа
+        const urlParams = new URLSearchParams(window.location.search);
+        const response = urlParams.get('response');
+        if (response) {
+            startChat('chat');
+            addMessage(decodeURIComponent(response), false);
+        } else {
+            showMenu();
         }
     </script>
 </body>
