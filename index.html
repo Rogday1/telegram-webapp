@@ -1,50 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Telegram WebApp</title>
+    <title>AI Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... предыдущие стили ... */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            color: var(--tg-theme-text-color, #000000);
+            background: var(--tg-theme-bg-color, #ffffff);
+        }
 
-        .menu-button {
-            display: block;
-            width: 100%;
-            padding: 16px 20px;
-            margin: 8px 0;
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 32px);
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .send-button {
+            padding: 12px 24px;
             border: none;
             border-radius: 8px;
-            background: var(--tg-theme-button-color, #50a8eb);
+            background: var(--tg-theme-button-color, #007bff);
             color: var(--tg-theme-button-text-color, #ffffff);
             cursor: pointer;
             font-size: 16px;
-            text-align: center;
         }
 
-        .menu-button:hover {
-            opacity: 0.9;
+        .welcome-text {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 16px;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Меню -->
-        <div id="menuContainer">
-            <div class="menu">
-                <button class="menu-button" onclick="startChat('chat')">💬 Чат с ботом</button>
-                <button class="menu-button" onclick="startChat('image')">🎨 Генерация изображений</button>
-                <button class="menu-button" onclick="startChat('help')">❓ Помощь</button>
-            </div>
+        <div class="welcome-text">
+            👋 Привет! Я AI-ассистент.<br>
+            Задайте мне любой вопрос!
         </div>
-
-        <!-- Чат -->
-        <div id="chatContainer" style="display: none;">
-            <button class="back-button" onclick="showMenu()">← Меню</button>
-            <div class="chat-area" id="chatArea"></div>
-            <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
-                <button class="send-button" id="sendButton">Отправить</button>
-            </div>
+        <div class="input-area">
+            <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
+            <button class="send-button" id="sendButton">Отправить</button>
         </div>
     </div>
 
@@ -52,95 +71,22 @@
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        const menuContainer = document.getElementById('menuContainer');
-        const chatContainer = document.getElementById('chatContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        const chatArea = document.getElementById('chatArea');
-
-        let currentMode = '';
-        let chatHistory = [];
-
-        // Проверяем URL на наличие истории чата
-        const urlParams = new URLSearchParams(window.location.search);
-        const historyParam = urlParams.get('history');
-        if (historyParam) {
-            try {
-                chatHistory = JSON.parse(decodeURIComponent(historyParam));
-                startChat('chat');
-                // Отображаем историю
-                chatHistory.forEach(msg => {
-                    addMessage(msg.content, msg.role === 'user');
-                });
-            } catch (error) {
-                console.error('Error parsing chat history:', error);
-                showMenu();
-            }
-        } else {
-            showMenu();
-        }
-
-        function showMenu() {
-            menuContainer.style.display = 'block';
-            chatContainer.style.display = 'none';
-            chatArea.innerHTML = '';
-            currentMode = '';
-        }
-
-        function startChat(mode) {
-            currentMode = mode;
-            menuContainer.style.display = 'none';
-            chatContainer.style.display = 'block';
-            
-            if (!historyParam) {
-                chatArea.innerHTML = '';
-                let welcomeMessage = '';
-                switch(mode) {
-                    case 'chat':
-                        welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
-                        break;
-                    case 'image':
-                        welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
-                        break;
-                    case 'help':
-                        welcomeMessage = '❓ Чем могу помочь?';
-                        break;
-                }
-                addMessage(welcomeMessage, false);
-            }
-            messageInput.focus();
-        }
-
-        function addMessage(text, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            messageDiv.textContent = text;
-            chatArea.appendChild(messageDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
-        }
 
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
 
-            addMessage(message, true);
-            messageInput.value = '';
-
             try {
-                // Добавляем сообщение в историю
-                chatHistory.push({
-                    role: 'user',
-                    content: message
-                });
-
                 await tg.sendData(JSON.stringify({
-                    action: currentMode,
-                    text: message,
-                    history: chatHistory
+                    action: 'chat',
+                    text: message
                 }));
+                tg.close();
             } catch (error) {
-                addMessage('❌ Ошибка отправки сообщения', false);
                 console.error('Error:', error);
+                alert('Ошибка отправки сообщения');
             }
         }
 
@@ -154,6 +100,9 @@
                 sendMessage();
             }
         });
+
+        // Фокус на поле ввода
+        messageInput.focus();
     </script>
 </body>
 </html>
