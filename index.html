@@ -5,19 +5,142 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... предыдущие стили ... */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            color: var(--tg-theme-text-color, #000000);
+            background: var(--tg-theme-bg-color, #ffffff);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .menu-button {
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            background: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .menu-button:hover {
+            opacity: 0.9;
+        }
+
+        .chat-container {
+            display: none;
+        }
+
+        .chat-area {
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background: var(--tg-theme-bg-color, #ffffff);
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--tg-theme-bg-color, #ffffff);
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            font-size: 16px;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            border: none;
+            background: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .send-button:hover {
+            opacity: 0.9;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            background: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            cursor: pointer;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="chat-area" id="chatArea">
-            <div class="message bot-message">
-                👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!
-            </div>
+        <!-- Меню выбора режима -->
+        <div class="menu" id="menu">
+            <button class="menu-button" onclick="startChat('chat')">💬 Чат с ботом</button>
+            <button class="menu-button" onclick="startChat('image')">🎨 Генерация изображений</button>
+            <button class="menu-button" onclick="startChat('help')">❓ Помощь</button>
         </div>
-        <div class="input-area">
-            <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
-            <button class="send-button" id="sendButton">Отправить</button>
+
+        <!-- Контейнер чата -->
+        <div class="chat-container" id="chatContainer">
+            <button class="back-button" onclick="showMenu()">← Назад</button>
+            <div class="chat-area" id="chatArea"></div>
+            <div class="input-area">
+                <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
+                <button class="send-button" id="sendButton">Отправить</button>
+            </div>
         </div>
     </div>
 
@@ -25,9 +148,40 @@
         let tg = window.Telegram.WebApp;
         tg.expand();
 
+        const menu = document.getElementById('menu');
+        const chatContainer = document.getElementById('chatContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const chatArea = document.getElementById('chatArea');
+
+        let currentMode = '';
+
+        function showMenu() {
+            menu.style.display = 'flex';
+            chatContainer.style.display = 'none';
+        }
+
+        function startChat(mode) {
+            currentMode = mode;
+            menu.style.display = 'none';
+            chatContainer.style.display = 'block';
+            chatArea.innerHTML = '';
+
+            let welcomeMessage = '';
+            switch(mode) {
+                case 'chat':
+                    welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
+                    break;
+                case 'image':
+                    welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
+                    break;
+                case 'help':
+                    welcomeMessage = '❓ Чем могу помочь?';
+                    break;
+            }
+            addMessage(welcomeMessage, false);
+            messageInput.focus();
+        }
 
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
@@ -37,33 +191,20 @@
             chatArea.scrollTop = chatArea.scrollHeight;
         }
 
-        // Проверяем URL на наличие ответа
-        const urlParams = new URLSearchParams(window.location.search);
-        const response = urlParams.get('response');
-        if (response) {
-            addMessage(decodeURIComponent(response), false);
-        }
-
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
 
-            // Добавляем сообщение пользователя
             addMessage(message, true);
             messageInput.value = '';
 
             try {
-                // Отправляем сообщение в бот
                 await tg.sendData(JSON.stringify({
-                    action: 'message',
+                    action: currentMode,
                     text: message
                 }));
                 
-                // Показываем индикатор загрузки
                 addMessage('⌛ Ожидание ответа...', false);
-                
-                // Закрываем веб-приложение для получения ответа
-                tg.close();
             } catch (error) {
                 addMessage('❌ Ошибка отправки сообщения', false);
                 console.error('Ошибка:', error);
@@ -81,8 +222,8 @@
             }
         });
 
-        // Фокус на поле ввода при открытии
-        messageInput.focus();
+        // Показываем меню при запуске
+        showMenu();
     </script>
 </body>
 </html>
