@@ -1,178 +1,120 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>AI Chat</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        /* ... предыдущие стили ... */
+<!-- ... предыдущие стили без изменений ... -->
 
-        .menu {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
+<script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
 
-        .menu-button {
-            display: block;
-            width: 100%;
-            padding: 16px 20px;
-            border: none;
-            border-radius: 8px;
-            background: var(--tg-theme-button-color, #50a8eb);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            cursor: pointer;
-            font-size: 16px;
-            text-align: center;
-        }
+    const menuContainer = document.getElementById('menuContainer');
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const chatArea = document.getElementById('chatArea');
 
-        .chat-container {
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Меню -->
-        <div id="menuContainer">
-            <div class="menu">
-                <button class="menu-button" onclick="startChat('chat')">💬 Чат с ботом</button>
-                <button class="menu-button" onclick="startChat('image')">🎨 Генерация изображений</button>
-                <button class="menu-button" onclick="startChat('help')">❓ Помощь</button>
-            </div>
-        </div>
+    let currentMode = '';
 
-        <!-- Чат -->
-        <div id="chatContainer" class="chat-container">
-            <button class="menu-button" onclick="showMenu()">← Вернуться в меню</button>
-            <div class="chat-area" id="chatArea">
-                <div class="message bot-message">
-                    👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!
-                </div>
-            </div>
-            <div class="input-area">
-                <input type="text" class="message-input" id="messageInput" placeholder="Введите сообщение...">
-                <button class="send-button" id="sendButton">Отправить</button>
-            </div>
-        </div>
-    </div>
+    function showMenu() {
+        menuContainer.style.display = 'block';
+        chatContainer.style.display = 'none';
+        currentMode = '';
+    }
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-
-        const menuContainer = document.getElementById('menuContainer');
-        const chatContainer = document.getElementById('chatContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const chatArea = document.getElementById('chatArea');
-
-        let currentMode = '';
-
-        // Проверяем URL на наличие сообщения и ответа
-        const urlParams = new URLSearchParams(window.location.search);
-        const message = urlParams.get('message');
-        const response = urlParams.get('response');
+    function startChat(mode) {
+        currentMode = mode;
+        menuContainer.style.display = 'none';
+        chatContainer.style.display = 'block';
         
-        if (message && response) {
-            startChat('chat');
-            // Показываем предыдущее сообщение и ответ
-            addMessage(decodeURIComponent(message), true);
-            addMessage(decodeURIComponent(response), false);
-        } else {
-            showMenu();
+        chatArea.innerHTML = '';
+        let welcomeMessage = '';
+        switch(mode) {
+            case 'chat':
+                welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
+                break;
+            case 'image':
+                welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
+                break;
+            case 'help':
+                welcomeMessage = '❓ Чем могу помочь?';
+                break;
         }
+        addMessage(welcomeMessage, false);
+        messageInput.focus();
+    }
 
-        function showMenu() {
-            menuContainer.style.display = 'block';
-            chatContainer.style.display = 'none';
-            currentMode = '';
-        }
+    function addMessage(text, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+        messageDiv.textContent = text;
+        chatArea.appendChild(messageDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
 
-        function startChat(mode) {
-            currentMode = mode;
-            menuContainer.style.display = 'none';
-            chatContainer.style.display = 'block';
-            
-            if (!message && !response) {
-                chatArea.innerHTML = '';
-                let welcomeMessage = '';
-                switch(mode) {
-                    case 'chat':
-                        welcomeMessage = '👋 Привет! Я AI-ассистент. Задайте мне любой вопрос!';
-                        break;
-                    case 'image':
-                        welcomeMessage = '🎨 Режим генерации изображений. Опишите, что вы хотите увидеть!';
-                        break;
-                    case 'help':
-                        welcomeMessage = '❓ Чем могу помочь?';
-                        break;
+    async function sendMessage() {
+        const message = messageInput.value.trim();
+        if (!message || !currentMode) return;
+
+        // Блокируем интерфейс
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+
+        // Добавляем сообщение пользователя
+        addMessage(message, true);
+        messageInput.value = '';
+
+        try {
+            // Показываем индикатор загрузки
+            addMessage('⌛ Ожидание ответа...', false);
+
+            // Отправляем запрос к API
+            const response = await fetch('http://localhost:8000/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    mode: currentMode,
+                    text: message
+                })
+            });
+
+            // Удаляем индикатор загрузки
+            chatArea.removeChild(chatArea.lastChild);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    addMessage(data.response, false);
+                } else {
+                    throw new Error(data.error);
                 }
-                addMessage(welcomeMessage, false);
+            } else {
+                throw new Error('Network response was not ok');
             }
+        } catch (error) {
+            console.error('Error:', error);
+            addMessage('❌ Ошибка: Не удалось получить ответ', false);
+        } finally {
+            // Разблокируем интерфейс
+            messageInput.disabled = false;
+            sendButton.disabled = false;
             messageInput.focus();
         }
+    }
 
-        function addMessage(text, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            messageDiv.textContent = text;
-            chatArea.appendChild(messageDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
+    // Обработка нажатия кнопки
+    sendButton.addEventListener('click', sendMessage);
+
+    // Обработка нажатия Enter
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
         }
+    });
 
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            // Блокируем интерфейс
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-
-            // Добавляем сообщение пользователя
-            addMessage(message, true);
-            messageInput.value = '';
-
-            try {
-                // Показываем индикатор загрузки
-                addMessage('⌛ Ожидание ответа...', false);
-
-                // Отправляем сообщение через Telegram WebApp
-                await tg.sendData(JSON.stringify({
-                    action: currentMode,
-                    text: message
-                }));
-
-                // Удаляем индикатор загрузки
-                chatArea.removeChild(chatArea.lastChild);
-
-                // Закрываем веб-приложение
-                tg.close();
-
-            } catch (error) {
-                console.error('Error:', error);
-                // Удаляем индикатор загрузки
-                chatArea.removeChild(chatArea.lastChild);
-                addMessage('❌ Ошибка отправки сообщения', false);
-                
-                // Разблокируем интерфейс
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                messageInput.focus();
-            }
-        }
-
-        // Обработка нажатия кнопки
-        sendButton.addEventListener('click', sendMessage);
-
-        // Обработка нажатия Enter
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    </script>
+    // Показываем меню при запуске
+    showMenu();
+</script>
 </body>
 </html>
