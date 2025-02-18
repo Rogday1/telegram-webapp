@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html>
-<!-- ... остальные стили без изменений ... -->
+<!-- ... остальной код без изменений ... -->
 
 <script>
     let tg = window.Telegram.WebApp;
@@ -9,6 +7,17 @@
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const chatArea = document.getElementById('chatArea');
+
+    // Проверяем URL на наличие сообщения и ответа
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get('message');
+    const response = urlParams.get('response');
+    
+    if (message && response) {
+        // Показываем предыдущее сообщение и ответ
+        addMessage(decodeURIComponent(message), true);
+        addMessage(decodeURIComponent(response), false);
+    }
 
     function addMessage(text, isUser = false) {
         const messageDiv = document.createElement('div');
@@ -43,18 +52,13 @@
             // Удаляем индикатор загрузки
             chatArea.removeChild(chatArea.lastChild);
 
-            // Добавляем сообщение об отправке
-            addMessage('✅ Сообщение отправлено', false);
-
-            // Разблокируем интерфейс через 1 секунду
-            setTimeout(() => {
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                messageInput.focus();
-            }, 1000);
+            // Закрываем веб-приложение
+            tg.close();
 
         } catch (error) {
             console.error('Error:', error);
+            // Удаляем индикатор загрузки
+            chatArea.removeChild(chatArea.lastChild);
             addMessage('❌ Ошибка отправки сообщения', false);
             
             // Разблокируем интерфейс
@@ -64,19 +68,5 @@
         }
     }
 
-    // Обработка нажатия кнопки
-    sendButton.addEventListener('click', sendMessage);
-
-    // Обработка нажатия Enter
-    messageInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    // Фокус на поле ввода
-    messageInput.focus();
+    // ... остальной код без изменений ...
 </script>
-</body>
-</html>
