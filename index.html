@@ -46,16 +46,11 @@
             messageInput.value = '';
 
             try {
-                // Отправляем сообщение в бот
+                // Отправляем сообщение в бот и закрываем веб-приложение
                 await tg.sendData(JSON.stringify({
                     action: 'message',
                     text: message
                 }));
-
-                // Показываем индикатор загрузки
-                addMessage('⌛ Ожидание ответа...', false);
-                
-                // Закрываем веб-приложение для получения ответа
                 tg.close();
             } catch (error) {
                 addMessage('❌ Ошибка отправки сообщения', false);
@@ -73,20 +68,6 @@
                 sendMessage();
             }
         });
-
-        // Получаем ответ из URL если он есть
-        const urlParams = new URLSearchParams(window.location.search);
-        const responseMessage = urlParams.get('message');
-        if (responseMessage) {
-            // Удаляем индикатор загрузки если есть
-            const loadingMessages = Array.from(chatArea.getElementsByClassName('bot-message')).filter(
-                msg => msg.textContent === '⌛ Ожидание ответа...'
-            );
-            loadingMessages.forEach(msg => msg.remove());
-            
-            // Добавляем ответ бота
-            addMessage(decodeURIComponent(responseMessage), false);
-        }
     </script>
 </body>
 </html>
