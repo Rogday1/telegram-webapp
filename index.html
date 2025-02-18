@@ -72,7 +72,7 @@
             chatArea.scrollTop = chatArea.scrollHeight;
 
             // Отправляем запрос к API
-            const response = await fetch('https://api.example.com/chat', {
+            const response = await fetch('http://localhost:8000/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
